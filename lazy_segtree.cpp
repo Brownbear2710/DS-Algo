@@ -14,80 +14,82 @@
 using namespace std;
 using ll = long long;
 
-int a[100005], tree[4*100005], lazy[4*100005];
+#define MAXN 1000006
+#define MOD 1000000007
 
-void init(int node, int start, int end)
+struct Lz
 {
-    if(start > end)
-        return;
-    if(start == end)
+	//! Member Var
+	ll update;
+	bool operator==(Lz l) { return l.update == update; }
+};
+struct Tr
+{
+	//! Member Var
+	ll val;
+	//! Operator(+) overload for combinig results
+	Tr operator+(Tr t) { return Tr{t.val + val}; }
+	Tr operator%(int m) { return Tr{val % m}; }
+};
+
+
+int n;
+ll a[MAXN];
+Tr tree[4*MAXN];
+Lz lazy[4*MAXN];
+const Tr TNone = {0}; //! Update According to member variables
+const Lz LNone = {0}; //! Update According to member variables
+// Lazy for child and tree for current
+inline void apply(int node, ll s, ll e, Lz u)
+{
+	if(u == LNone) return;
+	//! update tree[node] and lazy[node] by 'u'
+}
+inline void push_down(int node, int s, int e)
+{
+	if(s == e) return;
+	apply(node<<1, s, s+e >> 1, lazy[node]);
+	apply(node<<1|1, s+e+2 >> 1, e, lazy[node]);
+	lazy[node] = LNone;
+}
+void init(int node, int s, int e)
+{
+    if(s > e) return;
+    lazy[node] = LNone;
+    if(s == e)
     {
-        tree[node] = a[start];
+        tree[node] = Tr{a[s]};
         return;
     }
-    int mid = (start + end)/2;
-    int left = node * 2, right = node * 2 + 1;
-    init(left, start, mid);
-    init(right, mid+1, end);
-    tree[node] = tree[left] + tree[right];
+    init(node<<1, s, s+e >> 1);
+    init(node<<1|1, s+e+2 >> 1, e);
+    tree[node] = (tree[node<<1] + tree[node<<1|1]) % MOD;
 }
 
-ll query(int node, int start, int end, int i, int j, ll carry = 0)
+void update(int node, int s, int e, int i, int j, Lz u)
 {
-    if(start > j or end < i)
-        return 0;
-    if(start >= i and end <= j)
-        return tree[node] + carry * (end-start+1);
-    int mid = (start + end)/2;
-    int left = node * 2, right = node * 2 + 1;
-    ll left_val = query(left, start, mid, i, j, carry + lazy[node]);
-    ll right_val = query(right, mid+1, end, i, j, carry + lazy[node]);
-    return left_val + right_val;
+    if(s > j or e < i) return;
+	if(s >= i and e <= j)
+	{
+		apply(node, s, e, u);
+		return;
+	}
+	push_down(node,s,e);
+	update(node<<1, s, s+e >> 1, i, j, u);
+	update((node<<1) + 1, s+e+2 >> 1, e, i, j, u);
+	tree[node] = (tree[node<<1] + tree[node<<1|1]) % MOD;
 }
 
-void update(int node, int start, int end, int i, int j, ll val)
+Tr query(int node, int s, int e, int i, int j)
 {
-    if(start > j or end < i)
-        return;
-    if(start >= i and end <= j)
-    {
-        lazy[node] += val;
-        tree[node] += val * (end - start + 1);
-        return;
-    }
-    int mid = (start + end)/2;
-    int left = node * 2, right = node * 2 + 1;
-    update(left, start, mid, i, j, val);
-    update(right, mid+1, end, i, j, val);
-    tree[node] = tree[left] + tree[right] + lazy[node] * (end - start + 1);
+    if(s > j or e < i) return TNone;
+	if(s >= i and e <= j) return tree[node];
+	push_down(node, s, e);
+	return (query(node << 1, s, s+e >> 1, i, j) + query(node << 1 | 1, s+e+2 >> 1, e, i, j)) % MOD;
 }
 
 int main()
 {
     int n;
-    cin >> n;
-    for(int i = 0; i < n; i++)
-        cin >> a[i+1];
-    init(1,1,n);
-    int q;
-    cin >> q;
-    while(q--)
-    {
-        int type;
-        cin >> type;
-        if(type == 0)
-        {
-            int i, j;
-            cin >> i >> j;
-            cout << query(1, 1, n, i, j) << "\n";
-        }
-        else
-        {
-            int i, j;
-            ll val;
-            cin >> i >> j >> val;
-            update(1, 1, n, i, j, val);
-        }
-    }
     return 0;
 }
